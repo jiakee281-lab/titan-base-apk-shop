@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titan Base APK Shop</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-rocket"></i>
+                    <h1>Titan Base</h1>
+                    <span class="subtitle">APK Shop</span>
+                </div>
+                <nav class="nav">
+                    <a href="#upload" class="nav-link active">Upload</a>
+                    <a href="#library" class="nav-link">Library</a>
+                    <a href="#about" class="nav-link">About</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section id="upload" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cloud-upload-alt"></i> Upload Your APK</h2>
+                    <p>Share your Titan Base APK with the world</p>
+                </div>
+                
+                <div class="upload-container">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3>Drop your APK here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" id="fileInput" accept=".apk" hidden>
+                    </div>
+                    
+                    <div class="upload-form">
+                        <div class="form-group">
+                            <label for="apkName">APK Name</label>
+                            <input type="text" id="apkName" placeholder="e.g., Titan Base v1.0" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="apkVersion">Version</label>
+                            <input type="text" id="apkVersion" placeholder="e.g., 1.0.0" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="apkDescription">Description</label>
+                            <textarea id="apkDescription" placeholder="Describe your APK features..." rows="3"></textarea>
+                        </div>
+                        
+                        <button type="button" id="uploadBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-upload"></i> Upload APK
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="uploadProgress" class="upload-progress hidden">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">Uploading...</p>
+                </div>
+            </section>
+
+            <!-- Library Section -->
+            <section id="library" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-folder-open"></i> APK Library</h2>
+                    <p>Your uploaded applications</p>
+                </div>
+                
+                <div class="library-container">
+                    <div id="apkList" class="apk-grid">
+                        <!-- APK cards will be populated here -->
+                    </div>
+                    
+                    <div id="emptyState" class="empty-state">
+                        <i class="fas fa-box-open"></i>
+                        <h3>No APKs uploaded yet</h3>
+                        <p>Upload your first APK to get started!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Section -->
+            <section id="about" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-info-circle"></i> About Titan Base</h2>
+                </div>
+                
+                <div class="about-content">
+                    <div class="about-card">
+                        <div class="about-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3>Secure & Private</h3>
+                        <p>Your APKs are stored securely and only accessible to you. Complete control over your personal builds.</p>
+                    </div>
+                    
+                    <div class="about-card">
+                        <div class="about-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3>Easy Management</h3>
+                        <p>Upload, organize, and share your APKs with a simple and intuitive interface designed for developers.</p>
+                    </div>
+                    
+                    <div class="about-card">
+                        <div class="about-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <h3>Built for Speed</h3>
+                        <p>Fast uploads, instant downloads, and reliable hosting for all your Android application needs.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2024 Titan Base APK Shop. Built with ❤️ for developers.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Confirm Action</h3>
+            <p id="confirmMessage">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button id="confirmBtn" class="btn btn-danger">Confirm</button>
+                <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

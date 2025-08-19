@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: titan-base-apk-shop
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build-css
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
