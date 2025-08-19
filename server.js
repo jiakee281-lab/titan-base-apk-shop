@@ -47,7 +47,34 @@ const upload = multer({
 
 // Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  try {
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).json({ 
+        error: 'Index file not found',
+        path: indexPath,
+        exists: fs.existsSync(indexPath),
+        files: fs.readdirSync(path.join(__dirname, 'public'))
+      });
+    }
+  } catch (error) {
+    console.error('Error serving index:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    uploadsDir: uploadsDir,
+    publicDir: path.join(__dirname, 'public')
+  });
 });
 
 // Upload APK
@@ -169,4 +196,6 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Titan Base APK Shop running on http://localhost:${PORT}`);
   console.log(`📁 Uploads directory: ${uploadsDir}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔌 Port: ${PORT}`);
 });
