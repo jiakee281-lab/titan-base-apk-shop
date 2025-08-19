@@ -1,5 +1,5 @@
-// Titan Base APK Shop - Main Application
-class TitanBaseApp {
+// Titan Base APK Shop - Enhanced JavaScript with Animations
+class TitanBaseAPKShop {
     constructor() {
         this.currentFile = null;
         this.apks = [];
@@ -8,122 +8,153 @@ class TitanBaseApp {
 
     init() {
         this.setupEventListeners();
-        this.setupNavigation();
         this.loadAPKs();
-        this.setupDragAndDrop();
+        this.setupSmoothScrolling();
+        this.setupIntersectionObserver();
+        this.setupParallaxEffects();
     }
 
     setupEventListeners() {
-        // File input change
-        const fileInput = document.getElementById('fileInput');
+        // File input and upload area
         const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
         const uploadBtn = document.getElementById('uploadBtn');
 
-        fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         uploadArea.addEventListener('click', () => fileInput.click());
-        uploadBtn.addEventListener('click', () => this.uploadAPK());
+        uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+        uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+        fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+        uploadBtn.addEventListener('click', this.uploadAPK.bind(this));
 
-        // Form inputs
-        const apkName = document.getElementById('apkName');
-        const apkVersion = document.getElementById('apkVersion');
-        const apkDescription = document.getElementById('apkDescription');
+        // Navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', this.handleNavigation.bind(this));
+        });
 
-        [apkName, apkVersion, apkDescription].forEach(input => {
-            input.addEventListener('input', () => this.validateForm());
+        // Form validation
+        ['apkName', 'apkVersion', 'apkDescription'].forEach(id => {
+            const element = document.getElementById(id);
+            element.addEventListener('input', this.validateForm.bind(this));
         });
     }
 
-    setupNavigation() {
-        const navLinks = document.querySelectorAll('.nav-link');
-        const sections = document.querySelectorAll('.section');
-
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
+    setupSmoothScrolling() {
+        // Smooth scroll to sections
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                const targetId = link.getAttribute('href').substring(1);
-                
-                // Update active nav link
-                navLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-
-                // Show target section
-                sections.forEach(section => {
-                    section.style.display = 'none';
-                });
-                document.getElementById(targetId).style.display = 'block';
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
             });
         });
     }
 
-    setupDragAndDrop() {
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
+    setupIntersectionObserver() {
+        // Animate elements when they come into view
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections and cards
+        document.querySelectorAll('.section, .apk-card, .about-card').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+    }
+
+    setupParallaxEffects() {
+        // Subtle parallax effect on scroll
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const parallaxElements = document.querySelectorAll('.section-header h2 i');
+            
+            parallaxElements.forEach((element, index) => {
+                const speed = 0.5 + (index * 0.1);
+                element.style.transform = `translateY(${scrolled * speed * 0.1}px)`;
             });
         });
+    }
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => {
-                uploadArea.classList.add('drag-over');
-            });
-        });
+    handleDragOver(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+        e.currentTarget.style.transform = 'scale(1.02)';
+    }
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => {
-                uploadArea.classList.remove('drag-over');
-            });
-        });
+    handleDragLeave(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        e.currentTarget.style.transform = 'scale(1)';
+    }
 
-        uploadArea.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                this.handleFileSelect({ target: fileInput });
-            }
-        });
+    handleDrop(e) {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            this.handleFile(files[0]);
+        }
+        e.currentTarget.classList.remove('drag-over');
+        e.currentTarget.style.transform = 'scale(1)';
     }
 
     handleFileSelect(e) {
         const file = e.target.files[0];
-        if (!file) return;
+        if (file) {
+            this.handleFile(file);
+        }
+    }
 
-        // Validate file type
+    handleFile(file) {
         if (!file.name.toLowerCase().endsWith('.apk')) {
             this.showToast('Please select an APK file', 'error');
             return;
         }
 
-        // Validate file size (100MB limit)
-        if (file.size > 100 * 1024 * 1024) {
-            this.showToast('File size must be less than 100MB', 'error');
-            return;
-        }
-
         this.currentFile = file;
+        this.showToast(`Selected: ${file.name}`, 'success');
         this.validateForm();
         
-        // Update upload area
+        // Animate the upload area
         const uploadArea = document.getElementById('uploadArea');
-        uploadArea.innerHTML = `
-            <div class="upload-icon">
-                <i class="fas fa-check-circle" style="color: #10b981;"></i>
-            </div>
-            <h3>${file.name}</h3>
-            <p>Size: ${this.formatFileSize(file.size)}</p>
-        `;
+        uploadArea.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            uploadArea.style.transform = 'scale(1)';
+        }, 200);
     }
 
     validateForm() {
-        const apkName = document.getElementById('apkName').value.trim();
-        const apkVersion = document.getElementById('apkVersion').value.trim();
+        const name = document.getElementById('apkName').value.trim();
+        const version = document.getElementById('apkVersion').value.trim();
+        const description = document.getElementById('apkDescription').value.trim();
         const uploadBtn = document.getElementById('uploadBtn');
 
-        const isValid = apkName && apkVersion && this.currentFile;
-        uploadBtn.disabled = !isValid;
+        if (name && version && description && this.currentFile) {
+            uploadBtn.disabled = false;
+            uploadBtn.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                uploadBtn.style.transform = 'scale(1)';
+            }, 200);
+        } else {
+            uploadBtn.disabled = true;
+        }
     }
 
     async uploadAPK() {
@@ -131,221 +162,192 @@ class TitanBaseApp {
 
         const formData = new FormData();
         formData.append('apk', this.currentFile);
+        formData.append('name', document.getElementById('apkName').value.trim());
+        formData.append('version', document.getElementById('apkVersion').value.trim());
+        formData.append('description', document.getElementById('apkDescription').value.trim());
 
-        // Add metadata
-        const apkName = document.getElementById('apkName').value.trim();
-        const apkVersion = document.getElementById('apkVersion').value.trim();
-        const apkDescription = document.getElementById('apkDescription').value.trim();
-
-        // Show progress
-        this.showUploadProgress();
+        const progressBar = document.getElementById('uploadProgress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
 
         try {
+            progressBar.classList.remove('hidden');
+            
+            // Simulate progress for better UX
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                progressFill.style.width = `${progress}%`;
+            }, 200);
+
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
             });
 
-            const result = await response.json();
+            clearInterval(progressInterval);
 
-            if (result.success) {
-                this.showToast('APK uploaded successfully!', 'success');
-                this.resetUploadForm();
-                this.loadAPKs(); // Refresh the library
+            if (response.ok) {
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Upload complete!';
+                
+                setTimeout(() => {
+                    progressBar.classList.add('hidden');
+                    this.resetForm();
+                    this.loadAPKs();
+                    this.showToast('APK uploaded successfully!', 'success');
+                }, 1000);
             } else {
-                this.showToast(result.error || 'Upload failed', 'error');
+                throw new Error('Upload failed');
             }
         } catch (error) {
-            console.error('Upload error:', error);
+            progressBar.classList.add('hidden');
             this.showToast('Upload failed. Please try again.', 'error');
-        } finally {
-            this.hideUploadProgress();
+            console.error('Upload error:', error);
         }
     }
 
-    showUploadProgress() {
-        const progress = document.getElementById('uploadProgress');
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-
-        progress.classList.remove('hidden');
-        
-        // Simulate progress
-        let width = 0;
-        const interval = setInterval(() => {
-            if (width >= 90) {
-                clearInterval(interval);
-                return;
-            }
-            width += Math.random() * 10;
-            progressFill.style.width = width + '%';
-        }, 200);
-
-        this.progressInterval = interval;
-    }
-
-    hideUploadProgress() {
-        const progress = document.getElementById('uploadProgress');
-        const progressFill = document.getElementById('progressFill');
-        
-        if (this.progressInterval) {
-            clearInterval(this.progressInterval);
-        }
-        
-        progressFill.style.width = '100%';
-        setTimeout(() => {
-            progress.classList.add('hidden');
-            progressFill.style.width = '0%';
-        }, 500);
-    }
-
-    resetUploadForm() {
-        this.currentFile = null;
-        document.getElementById('fileInput').value = '';
+    resetForm() {
         document.getElementById('apkName').value = '';
         document.getElementById('apkVersion').value = '';
         document.getElementById('apkDescription').value = '';
-        
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.innerHTML = `
-            <div class="upload-icon">
-                <i class="fas fa-mobile-alt"></i>
-            </div>
-            <h3>Drop your APK here</h3>
-            <p>or click to browse</p>
-        `;
-        
+        document.getElementById('fileInput').value = '';
+        this.currentFile = null;
         this.validateForm();
     }
 
     async loadAPKs() {
         try {
             const response = await fetch('/apks');
-            this.apks = await response.json();
-            this.renderAPKList();
+            if (response.ok) {
+                this.apks = await response.json();
+                this.renderAPKs();
+            }
         } catch (error) {
             console.error('Error loading APKs:', error);
-            this.showToast('Failed to load APKs', 'error');
         }
     }
 
-    renderAPKList() {
+    renderAPKs() {
         const apkList = document.getElementById('apkList');
         const emptyState = document.getElementById('emptyState');
 
         if (this.apks.length === 0) {
-            apkList.style.display = 'none';
+            apkList.innerHTML = '';
             emptyState.style.display = 'block';
             return;
         }
 
-        apkList.style.display = 'grid';
         emptyState.style.display = 'none';
-
         apkList.innerHTML = this.apks.map(apk => this.createAPKCard(apk)).join('');
+        
+        // Add staggered animation to cards
+        const cards = apkList.querySelectorAll('.apk-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
     }
 
     createAPKCard(apk) {
-        const uploadDate = new Date(apk.uploadDate).toLocaleDateString();
-        const fileSize = this.formatFileSize(apk.size);
+        const size = this.formatFileSize(apk.size);
+        const date = new Date(apk.uploadDate).toLocaleDateString();
         
         return `
-            <div class="apk-card" data-filename="${apk.filename}">
+            <div class="apk-card" data-id="${apk.id}">
                 <div class="card-header">
                     <div class="apk-info">
-                        <h3>${apk.originalName}</h3>
-                        <span class="version">v1.0</span>
+                        <h3>${this.escapeHtml(apk.name)}</h3>
+                        <span class="version">v${this.escapeHtml(apk.version)}</span>
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-success" onclick="app.downloadAPK('${apk.filename}')">
-                            <i class="fas fa-download"></i>
+                        <button class="btn btn-success" onclick="app.downloadAPK('${apk.id}')">
+                            <i class="fas fa-download"></i> Download
                         </button>
-                        <button class="btn btn-danger" onclick="app.deleteAPK('${apk.filename}')">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn btn-danger" onclick="app.deleteAPK('${apk.id}')">
+                            <i class="fas fa-trash"></i> Delete
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="description">
-                        Personal APK build - ${apk.originalName}
-                    </div>
+                    <p class="description">${this.escapeHtml(apk.description)}</p>
                     <div class="apk-details">
-                        <span class="size">${fileSize}</span>
-                        <span class="date">${uploadDate}</span>
+                        <span class="size">${size}</span>
+                        <span class="date">${date}</span>
                     </div>
                 </div>
             </div>
         `;
     }
 
-    async downloadAPK(filename) {
+    async downloadAPK(id) {
         try {
-            window.open(`/download/${filename}`, '_blank');
-            this.showToast('Download started', 'success');
-        } catch (error) {
-            console.error('Download error:', error);
-            this.showToast('Download failed', 'error');
-        }
-    }
-
-    async deleteAPK(filename) {
-        const confirmed = await this.showConfirmModal(
-            'Are you sure you want to delete this APK?',
-            'This action cannot be undone.'
-        );
-
-        if (!confirmed) return;
-
-        try {
-            const response = await fetch(`/apks/${filename}`, {
-                method: 'DELETE'
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.showToast('APK deleted successfully', 'success');
-                this.loadAPKs(); // Refresh the list
+            const response = await fetch(`/download/${id}`);
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `titan-base-${id}.apk`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                this.showToast('Download started!', 'success');
             } else {
-                this.showToast(result.error || 'Delete failed', 'error');
+                throw new Error('Download failed');
             }
         } catch (error) {
-            console.error('Delete error:', error);
-            this.showToast('Delete failed. Please try again.', 'error');
+            this.showToast('Download failed. Please try again.', 'error');
+            console.error('Download error:', error);
         }
     }
 
-    async showConfirmModal(title, message) {
-        return new Promise((resolve) => {
-            const modal = document.getElementById('confirmModal');
-            const confirmMessage = document.getElementById('confirmMessage');
-            const confirmBtn = document.getElementById('confirmBtn');
-            const cancelBtn = document.getElementById('cancelBtn');
+    async deleteAPK(id) {
+        this.showConfirmModal(
+            'Are you sure you want to delete this APK? This action cannot be undone.',
+            async () => {
+                try {
+                    const response = await fetch(`/delete/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        this.showToast('APK deleted successfully!', 'success');
+                        this.loadAPKs();
+                    } else {
+                        throw new Error('Delete failed');
+                    }
+                } catch (error) {
+                    this.showToast('Delete failed. Please try again.', 'error');
+                    console.error('Delete error:', error);
+                }
+            }
+        );
+    }
 
-            confirmMessage.innerHTML = `<strong>${title}</strong><br>${message}`;
+    showConfirmModal(message, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
 
-            modal.classList.remove('hidden');
+        confirmMessage.textContent = message;
+        modal.classList.remove('hidden');
 
-            const handleConfirm = () => {
-                modal.classList.add('hidden');
-                cleanup();
-                resolve(true);
-            };
+        const handleConfirm = () => {
+            modal.classList.add('hidden');
+            onConfirm();
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+        };
 
-            const handleCancel = () => {
-                modal.classList.add('hidden');
-                cleanup();
-                resolve(false);
-            };
+        const handleCancel = () => {
+            modal.classList.add('hidden');
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+        };
 
-            const cleanup = () => {
-                confirmBtn.removeEventListener('click', handleConfirm);
-                cancelBtn.removeEventListener('click', handleCancel);
-            };
-
-            confirmBtn.addEventListener('click', handleConfirm);
-            cancelBtn.addEventListener('click', handleCancel);
-        });
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
     }
 
     showToast(message, type = 'info') {
@@ -353,11 +355,9 @@ class TitanBaseApp {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         
-        const icon = this.getToastIcon(type);
-        
         toast.innerHTML = `
             <div class="toast-header">
-                <h4>${icon} ${this.getToastTitle(type)}</h4>
+                <h4>${this.getToastTitle(type)}</h4>
                 <button class="close-btn" onclick="this.parentElement.parentElement.remove()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -370,29 +370,48 @@ class TitanBaseApp {
         // Auto-remove after 5 seconds
         setTimeout(() => {
             if (toast.parentElement) {
-                toast.remove();
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
             }
         }, 5000);
     }
 
-    getToastIcon(type) {
-        const icons = {
-            success: '<i class="fas fa-check-circle" style="color: #10b981;"></i>',
-            error: '<i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>',
-            warning: '<i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>',
-            info: '<i class="fas fa-info-circle" style="color: #6366f1;"></i>'
-        };
-        return icons[type] || icons.info;
-    }
-
     getToastTitle(type) {
         const titles = {
-            success: 'Success',
-            error: 'Error',
-            warning: 'Warning',
+            success: 'Success!',
+            error: 'Error!',
+            warning: 'Warning!',
             info: 'Info'
         };
         return titles[type] || 'Info';
+    }
+
+    handleNavigation(e) {
+        e.preventDefault();
+        
+        // Remove active class from all links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Add active class to clicked link
+        e.target.classList.add('active');
+        
+        // Smooth scroll to section
+        const targetId = e.target.getAttribute('href').substring(1);
+        const targetSection = document.getElementById(targetId);
+        
+        if (targetSection) {
+            targetSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     }
 
     formatFileSize(bytes) {
@@ -402,38 +421,37 @@ class TitanBaseApp {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 }
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.app = new TitanBaseApp();
-});
-
-// Handle navigation hash changes
-window.addEventListener('hashchange', () => {
-    const hash = window.location.hash || '#upload';
-    const targetSection = document.querySelector(hash);
-    const navLink = document.querySelector(`[href="${hash}"]`);
+    window.app = new TitanBaseAPKShop();
     
-    if (targetSection && navLink) {
-        // Hide all sections
-        document.querySelectorAll('.section').forEach(section => {
-            section.style.display = 'none';
-        });
-        
-        // Show target section
-        targetSection.style.display = 'block';
-        
-        // Update active nav
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        navLink.classList.add('active');
-    }
+    // Add loading animation
+    document.body.style.opacity = '0';
+    document.body.style.transition = 'opacity 0.5s ease';
+    
+    setTimeout(() => {
+        document.body.style.opacity = '1';
+    }, 100);
 });
 
-// Initialize with current hash or default to upload
-window.addEventListener('load', () => {
-    const hash = window.location.hash || '#upload';
-    window.location.hash = hash;
+// Add scroll-based animations
+window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    const header = document.querySelector('.header');
+    
+    if (scrolled > 100) {
+        header.style.background = 'rgba(26, 26, 26, 0.95)';
+        header.style.backdropFilter = 'blur(10px)';
+    } else {
+        header.style.background = 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)';
+        header.style.backdropFilter = 'none';
+    }
 });
