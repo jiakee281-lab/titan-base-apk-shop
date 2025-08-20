@@ -11,7 +11,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const morgan = require('morgan');
-const AWS = require('aws-sdk');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,26 +41,6 @@ const uploadsDir = path.join(__dirname, 'uploads');
 const dataDir = path.join(__dirname, 'data');
 fs.ensureDirSync(uploadsDir);
 fs.ensureDirSync(dataDir);
-
-// Cloud storage configuration (AWS S3)
-let s3 = null;
-let cloudStorageEnabled = false;
-
-function initializeCloudStorage() {
-    const config = {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        region: process.env.AWS_REGION || 'us-east-1'
-    };
-    
-    if (config.accessKeyId && config.secretAccessKey) {
-        s3 = new AWS.S3(config);
-        cloudStorageEnabled = true;
-        console.log('✅ Cloud storage (AWS S3) initialized');
-    } else {
-        console.log('⚠️ Cloud storage not configured, using local storage');
-    }
-}
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
@@ -169,7 +148,7 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         port: PORT,
         environment: process.env.NODE_ENV || 'development',
-        cloudStorage: cloudStorageEnabled ? 'enabled' : 'disabled'
+        features: ['authentication', 'versioning', 'analytics', 'api-access', 'bulk-operations']
     });
 });
 
@@ -297,24 +276,6 @@ app.post('/api/apks/upload', authenticateToken, upload.single('apk'), async (req
                         `, Object.values(apkData), function(err) {
                             if (err) {
                                 return res.status(500).json({ error: 'Upload failed' });
-                            }
-
-                            // Upload to cloud storage if enabled
-                            if (cloudStorageEnabled && s3) {
-                                const s3Params = {
-                                    Bucket: process.env.AWS_S3_BUCKET,
-                                    Key: `apks/${req.file.filename}`,
-                                    Body: fileBuffer,
-                                    ContentType: 'application/vnd.android.package-archive'
-                                };
-
-                                s3.upload(s3Params, (err, data) => {
-                                    if (err) {
-                                        console.error('Cloud storage upload failed:', err);
-                                    } else {
-                                        console.log('✅ APK uploaded to cloud storage');
-                                    }
-                                });
                             }
 
                             res.json({
@@ -455,55 +416,8 @@ app.get('/api/apks/:id/download', authenticateToken, (req, res) => {
             VALUES (?, ?, ?, ?, ?)
         `, Object.values(analyticsData));
 
-        // Determine file source (local or cloud)
-        if (cloudStorageEnabled && s3) {
-            // Download from S3
-            const s3Params = {
-                Bucket: process.env.AWS_S3_BUCKET,
-                Key: `apks/${apk.filename}`
-            };
-
-            s3.getObject(s3Params, (err, data) => {
-                if (err) {
-                    console.error('S3 download failed, falling back to local:', err);
-                    // Fallback to local file
-                    const filePath = path.join(uploadsDir, apk.filename);
-                    res.download(filePath, apk.original_name);
-                } else {
-                    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-                    res.setHeader('Content-Disposition', `attachment; filename="${apk.original_name}"`);
-                    res.send(data.Body);
-                }
-            });
-        } else {
-            // Local file download
-            const filePath = path.join(uploadsDir, apk.filename);
-            res.download(filePath, apk.original_name);
-        }
-    });
-});
-
-// Delete APK
-app.delete('/api/apks/:id', authenticateToken, (req, res) => {
-    const apkId = req.params.id;
-    
-    db.get('SELECT * FROM apks WHERE id = ?', [apkId], (err, apk) => {
-        if (err || !apk) {
-            return res.status(404).json({ error: 'APK not found' });
-        }
-
-        if (apk.user_id !== req.user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
-
-        // Soft delete - mark as inactive
-        db.run('UPDATE apks SET is_active = 0 WHERE id = ?', [apkId], (err) => {
-            if (err) {
-                return res.status(500).json({ error: 'Delete failed' });
-            }
-
-            res.json({ success: true, message: 'APK deleted successfully' });
-        });
+        const filePath = path.join(uploadsDir, apk.filename);
+        res.download(filePath, apk.original_name);
     });
 });
 
@@ -635,80 +549,6 @@ app.get('/api/external/apks', authenticateAPIKey, logAPIAccess, (req, res) => {
     });
 });
 
-app.get('/api/external/apks/:id/download', authenticateAPIKey, logAPIAccess, (req, res) => {
-    const apkId = req.params.id;
-    
-    db.get('SELECT * FROM apks WHERE id = ? AND is_active = 1', [apkId], (err, apk) => {
-        if (err || !apk) {
-            return res.status(404).json({ error: 'APK not found' });
-        }
-
-        // Log external download
-        const analyticsData = {
-            apk_id: apkId,
-            user_id: req.user.id,
-            ip_address: req.ip,
-            user_agent: req.get('User-Agent'),
-            file_size_downloaded: apk.file_size
-        };
-
-        db.run(`
-            INSERT INTO download_analytics 
-            (apk_id, user_id, ip_address, user_agent, file_size_downloaded)
-            VALUES (?, ?, ?, ?, ?)
-        `, Object.values(analyticsData));
-
-        // Download logic (same as authenticated endpoint)
-        if (cloudStorageEnabled && s3) {
-            const s3Params = {
-                Bucket: process.env.AWS_S3_BUCKET,
-                Key: `apks/${apk.filename}`
-            };
-
-            s3.getObject(s3Params, (err, data) => {
-                if (err) {
-                    const filePath = path.join(uploadsDir, apk.filename);
-                    res.download(filePath, apk.original_name);
-                } else {
-                    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-                    res.setHeader('Content-Disposition', `attachment; filename="${apk.original_name}"`);
-                    res.send(data.Body);
-                }
-            });
-        } else {
-            const filePath = path.join(uploadsDir, apk.filename);
-            res.download(filePath, apk.original_name);
-        }
-    });
-});
-
-// Cloud storage configuration
-app.post('/api/admin/cloud-storage', authenticateToken, requireAdmin, (req, res) => {
-    const { provider, bucketName, region, accessKeyId, secretAccessKey } = req.body;
-    
-    if (!provider || !bucketName || !region || !accessKeyId || !secretAccessKey) {
-        return res.status(400).json({ error: 'All cloud storage fields are required' });
-    }
-
-    db.run(`
-        INSERT OR REPLACE INTO cloud_storage_config 
-        (provider, bucket_name, region, access_key_id, secret_access_key, is_active)
-        VALUES (?, ?, ?, ?, ?, 1)
-    `, [provider, bucketName, region, accessKeyId, secretAccessKey], function(err) {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to configure cloud storage' });
-        }
-
-        // Reinitialize cloud storage
-        initializeCloudStorage();
-        
-        res.json({
-            success: true,
-            message: 'Cloud storage configured successfully'
-        });
-    });
-});
-
 // Error handling middleware
 app.use((error, req, res, next) => {
     if (error instanceof multer.MulterError) {
@@ -725,18 +565,15 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Initialize cloud storage
-initializeCloudStorage();
-
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 Titan Base Enterprise APK Shop running on http://localhost:${PORT}`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
     console.log(`🗄️ Database: ${dbPath}`);
-    console.log(`☁️ Cloud storage: ${cloudStorageEnabled ? 'enabled' : 'disabled'}`);
     console.log(`🔐 JWT Secret: ${JWT_SECRET === 'your-super-secret-jwt-key-change-in-production' ? 'DEFAULT (CHANGE IN PRODUCTION)' : 'configured'}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔌 Port: ${PORT}`);
+    console.log(`✨ Features: Authentication, Versioning, Analytics, API Access, Bulk Operations`);
 });
 
 // Graceful shutdown
