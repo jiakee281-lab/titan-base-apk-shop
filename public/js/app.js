@@ -253,24 +253,29 @@ class TitanBaseAPKShop {
         const size = this.formatFileSize(apk.size);
         const date = new Date(apk.uploadDate).toLocaleDateString();
         
+        // Handle cases where metadata might be missing (for backward compatibility)
+        const apkName = apk.name || apk.originalName || 'Unnamed APK';
+        const apkVersion = apk.version || 'Unknown Version';
+        const apkDescription = apk.description || 'No description available';
+        
         return `
-            <div class="apk-card" data-id="${apk.id}">
+            <div class="apk-card" data-id="${apk.id || apk.filename}">
                 <div class="card-header">
                     <div class="apk-info">
-                        <h3>${this.escapeHtml(apk.name)}</h3>
-                        <span class="version">v${this.escapeHtml(apk.version)}</span>
+                        <h3>${this.escapeHtml(apkName)}</h3>
+                        <span class="version">v${this.escapeHtml(apkVersion)}</span>
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-success" onclick="app.downloadAPK('${apk.id}')">
+                        <button class="btn btn-success" onclick="app.downloadAPK('${apk.id || apk.filename}')">
                             <i class="fas fa-download"></i> Download
                         </button>
-                        <button class="btn btn-danger" onclick="app.deleteAPK('${apk.id}')">
+                        <button class="btn btn-danger" onclick="app.deleteAPK('${apk.id || apk.filename}')">
                             <i class="fas fa-trash"></i> Delete
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="description">${this.escapeHtml(apk.description)}</p>
+                    <p class="description">${this.escapeHtml(apkDescription)}</p>
                     <div class="apk-details">
                         <span class="size">${size}</span>
                         <span class="date">${date}</span>
@@ -309,7 +314,7 @@ class TitanBaseAPKShop {
             'Are you sure you want to delete this APK? This action cannot be undone.',
             async () => {
                 try {
-                    const response = await fetch(`/delete/${id}`, { method: 'DELETE' });
+                    const response = await fetch(`/apks/${id}`, { method: 'DELETE' });
                     if (response.ok) {
                         this.showToast('APK deleted successfully!', 'success');
                         this.loadAPKs();

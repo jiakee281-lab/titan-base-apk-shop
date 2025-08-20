@@ -84,9 +84,20 @@ app.post('/upload', upload.single('apk'), (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // Extract metadata from form fields
+    const { name, version, description } = req.body;
+    
+    if (!name || !version || !description) {
+      return res.status(400).json({ error: 'APK name, version, and description are required' });
+    }
+
     const fileInfo = {
+      id: Date.now().toString(), // Generate unique ID
       filename: req.file.filename,
       originalName: req.file.originalname,
+      name: name.trim(),
+      version: version.trim(),
+      description: description.trim(),
       size: req.file.size,
       uploadDate: new Date().toISOString(),
       path: req.file.path
@@ -132,16 +143,29 @@ app.get('/apks', (req, res) => {
 });
 
 // Download APK
-app.get('/download/:filename', (req, res) => {
+app.get('/download/:id', (req, res) => {
   try {
-    const filename = req.params.filename;
-    const filePath = path.join(uploadsDir, filename);
+    const id = req.params.id;
+    const filesListPath = path.join(uploadsDir, 'files.json');
     
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found' });
+    if (!fs.existsSync(filesListPath)) {
+      return res.status(404).json({ error: 'APK not found' });
     }
     
-    res.download(filePath);
+    const filesList = JSON.parse(fs.readFileSync(filesListPath, 'utf8'));
+    const apk = filesList.find(file => file.id === id);
+    
+    if (!apk) {
+      return res.status(404).json({ error: 'APK not found' });
+    }
+    
+    const filePath = path.join(uploadsDir, apk.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'APK file not found' });
+    }
+    
+    res.download(filePath, apk.originalName);
   } catch (error) {
     console.error('Download error:', error);
     res.status(500).json({ error: 'Download failed' });
@@ -149,26 +173,31 @@ app.get('/download/:filename', (req, res) => {
 });
 
 // Delete APK
-app.delete('/apks/:filename', (req, res) => {
+app.delete('/apks/:id', (req, res) => {
   try {
-    const filename = req.params.filename;
-    const filePath = path.join(uploadsDir, filename);
+    const id = req.params.id;
     const filesListPath = path.join(uploadsDir, 'files.json');
     
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found' });
+    if (!fs.existsSync(filesListPath)) {
+      return res.status(404).json({ error: 'APK not found' });
+    }
+    
+    let filesList = JSON.parse(fs.readFileSync(filesListPath, 'utf8'));
+    const apk = filesList.find(file => file.id === id);
+    
+    if (!apk) {
+      return res.status(404).json({ error: 'APK not found' });
     }
     
     // Remove file
-    fs.removeSync(filePath);
+    const filePath = path.join(uploadsDir, apk.filename);
+    if (fs.existsSync(filePath)) {
+      fs.removeSync(filePath);
+    }
     
     // Update files list
-    let filesList = [];
-    if (fs.existsSync(filesListPath)) {
-      filesList = JSON.parse(fs.readFileSync(filesListPath, 'utf8'));
-      filesList = filesList.filter(file => file.filename !== filename);
-      fs.writeFileSync(filesListPath, JSON.stringify(filesList, null, 2));
-    }
+    filesList = filesList.filter(file => file.id !== id);
+    fs.writeFileSync(filesListPath, JSON.stringify(filesList, null, 2));
     
     res.json({ success: true, message: 'APK deleted successfully' });
   } catch (error) {
