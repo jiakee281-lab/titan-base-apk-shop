@@ -435,16 +435,148 @@ class TitanBaseAPKShop {
 }
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new TitanBaseAPKShop();
-    
-    // Add loading animation
-    document.body.style.opacity = '0';
-    document.body.style.transition = 'opacity 0.5s ease';
-    
-    setTimeout(() => {
-        document.body.style.opacity = '1';
-    }, 100);
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const apkList = document.getElementById('apkList');
+
+    // Load APKs on page load
+    loadAPKs();
+
+    // Handle form submission
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(uploadForm);
+        const apkFile = document.getElementById('apkFile').files[0];
+        
+        if (!apkFile) {
+            showStatus('Please select an APK file', 'error');
+            return;
+        }
+
+        // Show uploading status
+        showStatus('Uploading APK...', 'info');
+        
+        // Upload the file
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showStatus('APK uploaded successfully!', 'success');
+                uploadForm.reset();
+                loadAPKs(); // Refresh the list
+            } else {
+                showStatus(data.error || 'Upload failed', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            showStatus('Upload failed. Please try again.', 'error');
+        });
+    });
+
+    // Function to show status messages
+    function showStatus(message, type) {
+        uploadStatus.textContent = message;
+        uploadStatus.className = `status-message ${type}`;
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+            setTimeout(() => {
+                uploadStatus.textContent = '';
+                uploadStatus.className = 'status-message';
+            }, 5000);
+        }
+    }
+
+    // Function to load APKs
+    function loadAPKs() {
+        apkList.innerHTML = '<div class="loading">Loading APKs...</div>';
+        
+        fetch('/apks')
+            .then(response => response.json())
+            .then(apks => {
+                if (apks.length === 0) {
+                    apkList.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No APKs uploaded yet</h3>
+                            <p>Upload your first APK to get started!</p>
+                        </div>
+                    `;
+                } else {
+                    displayAPKs(apks);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading APKs:', error);
+                apkList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Error loading APKs</h3>
+                        <p>Please refresh the page to try again.</p>
+                    </div>
+                `;
+            });
+    }
+
+    // Function to display APKs
+    function displayAPKs(apks) {
+        apkList.innerHTML = apks.map(apk => `
+            <div class="apk-card">
+                <h3>${apk.name}</h3>
+                <div class="apk-info">
+                    <span><strong>Version:</strong> ${apk.version}</span>
+                    <span><strong>Description:</strong> ${apk.description || 'No description'}</span>
+                    <span><strong>Size:</strong> ${formatFileSize(apk.size)}</span>
+                    <span><strong>Uploaded:</strong> ${formatDate(apk.uploadDate)}</span>
+                </div>
+                <div class="apk-actions">
+                    <a href="/download/${apk.filename}" class="btn btn-download">📥 Download</a>
+                    <button class="btn btn-delete" onclick="deleteAPK('${apk.filename}')">🗑️ Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Function to format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Function to format date
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+
+    // Function to delete APK (make it global)
+    window.deleteAPK = function(filename) {
+        if (confirm('Are you sure you want to delete this APK?')) {
+            fetch(`/apks/${filename}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('APK deleted successfully!', 'success');
+                    loadAPKs(); // Refresh the list
+                } else {
+                    showStatus(data.error || 'Delete failed', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Delete error:', error);
+                showStatus('Delete failed. Please try again.', 'error');
+            });
+        }
+    };
 });
 
 // Add scroll-based animations

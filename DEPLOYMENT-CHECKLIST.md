@@ -1,59 +1,60 @@
-# 🚀 TITAN BASE APK SHOP - DEPLOYMENT CHECKLIST
+# 🚀 Simple APK Shop - Deployment Checklist
 
-## ✅ **COMPLETED STEPS:**
-- [x] ✅ Project created and configured
-- [x] ✅ Code committed to Git
-- [x] ✅ Pushed to GitHub: https://github.com/jiakee281-lab/titan-base-apk-shop
-- [x] ✅ Ready for online deployment
+## ✅ Pre-Deployment Checklist
 
-## 🌐 **NEXT STEPS - GO ONLINE:**
+- [x] Simplified server.js (no authentication, simple endpoints)
+- [x] Clean package.json (only essential dependencies)
+- [x] Simple frontend (upload form, APK list, download/delete)
+- [x] Render.yaml configuration
+- [x] SCSS build process
 
-### **STEP 1: Open Render.com** 🖥️
-- [ ] Go to: **[https://render.com](https://render.com)**
-- [ ] Click "Get Started" or "Sign Up"
-- [ ] Sign in with your **GitHub account**
+## 🚀 Quick Deploy to Render
 
-### **STEP 2: Create Web Service** ➕
-- [ ] Click the **"New +"** button
-- [ ] Select **"Web Service"**
-- [ ] Click **"Connect account"** (GitHub)
+### Option 1: Automated (Recommended)
+1. Run `deploy-online.bat` in your project folder
+2. Wait for Git push to complete
+3. Render will automatically build and deploy
 
-### **STEP 3: Connect Repository** 🔗
-- [ ] Select your repository: **`jiakee281-lab/titan-base-apk-shop`**
-- [ ] Click **"Connect"**
+### Option 2: Manual Deploy
+1. Build CSS: `npm run build-css`
+2. Commit changes: `git add . && git commit -m "Deploy simplified APK shop"`
+3. Push to GitHub: `git push origin main`
+4. Render will auto-deploy
 
-### **STEP 4: Configure Settings** ⚙️
-- [ ] **Name**: `titan-base-apk-shop`
-- [ ] **Environment**: `Node`
-- [ ] **Build Command**: `npm install && npm run build-css`
-- [ ] **Start Command**: `npm start`
-- [ ] **Plan**: `Free`
+## 🌐 Your Live App
 
-### **STEP 5: Deploy!** 🚀
-- [ ] Click **"Create Web Service"**
-- [ ] Wait **2-5 minutes** for deployment
-- [ ] Watch the build logs
-- [ ] **SUCCESS!** Your site is live!
+**URL**: https://titan-base-apk-shop.onrender.com
 
-## 🌟 **YOUR WEBSITE WILL BE LIVE AT:**
+## 📱 What's Working
+
+- ✅ **APK Upload**: Simple form, no login required
+- ✅ **APK Listing**: View all uploaded APKs
+- ✅ **APK Download**: Direct download links
+- ✅ **APK Deletion**: Remove unwanted files
+- ✅ **Responsive Design**: Works on all devices
+
+## 🔧 Server Endpoints
+
+- `POST /upload` - Upload APK files
+- `GET /apks` - List all APKs
+- `GET /download/:filename` - Download APK
+- `DELETE /apks/:filename` - Delete APK
+- `GET /health` - Server status
+- `GET /test` - Simple test
+
+## 📁 File Structure
+
 ```
-https://titan-base-apk-shop.onrender.com
+├── server.js              # Simplified server (no auth)
+├── package.json           # Clean dependencies
+├── render.yaml            # Render configuration
+├── public/
+│   ├── index.html         # Simple upload interface
+│   ├── css/style.css      # Built CSS
+│   └── js/app.js          # Frontend logic
+└── uploads/               # APK storage directory
 ```
 
-## 💡 **QUICK TIPS:**
-- **Keep this checklist open** while deploying
-- **Follow each step** exactly as shown
-- **If you get stuck**, check the build logs in Render
-- **Your site updates automatically** when you push to GitHub
+## 🎯 Ready to Deploy!
 
-## 🆘 **NEED HELP?**
-- Run `deploy-online.bat` for automated guidance
-- Check `DEPLOYMENT.md` for detailed instructions
-- Look at the build logs in Render dashboard
-
----
-
-## 🎯 **READY TO START?**
-**Click here: [https://render.com](https://render.com)**
-
-**Your Titan Base APK Shop will be online in 5 minutes!** 🚀
+Your simplified APK shop is ready to go live! Just run the deployment script and wait a few minutes for Render to build and deploy your app.
