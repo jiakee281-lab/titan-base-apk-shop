@@ -31,18 +31,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // File selection
     fileInput.addEventListener('change', function(e) {
-        handleFileSelection(e.target.files[0]);
+        if (e.target.files.length > 0) {
+            handleFileSelection(e.target.files[0]);
+        }
+    });
+    
+    // Also handle when user manually types in form fields
+    apkName.addEventListener('input', function() {
+        validateForm();
+    });
+    
+    apkVersion.addEventListener('input', function() {
+        validateForm();
+    });
+    
+    apkDescription.addEventListener('input', function() {
+        // Description is optional, so we don't need to validate for it
     });
     
     // Upload button
     uploadBtn.addEventListener('click', function() {
         uploadAPK();
     });
-    
-    // Form input changes
-    apkName.addEventListener('input', validateForm);
-    apkVersion.addEventListener('input', validateForm);
-    apkDescription.addEventListener('input', validateForm);
     
     // Modal events
     confirmBtn.addEventListener('click', function() {
@@ -94,18 +104,35 @@ document.addEventListener('DOMContentLoaded', function() {
         const nameWithoutExt = file.name.replace('.apk', '');
         apkName.value = nameWithoutExt;
         
-        // Enable upload button
-        uploadBtn.disabled = false;
+        // Show file status
+        const fileStatus = document.getElementById('fileStatus');
+        if (fileStatus) {
+            fileStatus.style.display = 'flex';
+        }
+        
+        // Enable upload button if form is valid
+        validateForm();
         
         showToast('APK file selected: ' + file.name, 'success');
     }
     
     function validateForm() {
-        const isValid = apkName.value.trim() && 
-                       apkVersion.value.trim() && 
-                       fileInput.files.length > 0;
+        const hasFile = fileInput.files.length > 0;
+        const hasName = apkName.value.trim() !== '';
+        const hasVersion = apkVersion.value.trim() !== '';
         
+        const isValid = hasFile && hasName && hasVersion;
+        
+        // Update button state
         uploadBtn.disabled = !isValid;
+        
+        // Add visual feedback
+        if (hasFile) {
+            uploadArea.classList.add('has-file');
+        } else {
+            uploadArea.classList.remove('has-file');
+        }
+        
         return isValid;
     }
     
@@ -181,6 +208,15 @@ document.addEventListener('DOMContentLoaded', function() {
         apkVersion.value = '';
         apkDescription.value = '';
         uploadBtn.disabled = true;
+        
+        // Hide file status
+        const fileStatus = document.getElementById('fileStatus');
+        if (fileStatus) {
+            fileStatus.style.display = 'none';
+        }
+        
+        // Remove has-file class
+        uploadArea.classList.remove('has-file');
     }
     
     function loadAPKs() {

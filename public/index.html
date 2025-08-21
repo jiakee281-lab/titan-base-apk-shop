@@ -41,11 +41,13 @@
                 
                 <div class="upload-container">
                     <div class="upload-area" id="uploadArea">
-                        <div class="upload-icon">
-                            <i class="fas fa-mobile-alt"></i>
-                        </div>
+                        <i class="fas fa-mobile-alt upload-icon"></i>
                         <h3>Drop your APK here</h3>
                         <p>or click to browse files</p>
+                        <div class="file-status" id="fileStatus" style="display: none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span>File selected</span>
+                        </div>
                         <input type="file" id="fileInput" accept=".apk" hidden>
                     </div>
                     
